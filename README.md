@@ -4,7 +4,7 @@ A full-stack notes app built for a software-engineering assignment: a signed-in 
 
 **Stack:** Next.js 16 (App Router) · TypeScript · better-auth · Drizzle ORM · PostgreSQL 18 · Tailwind CSS v4 · shadcn/ui · Bun · Turborepo · Vitest
 
-**Live URL:** (deployed on Render — see [Deployment](#deployment))
+**Live URL:** https://njnapp.onrender.com (Render web service from Docker Hub image `aivalacoder/next-js-notes-app:latest`)
 
 ---
 

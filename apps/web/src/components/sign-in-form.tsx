@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import z from "zod";
 
-import { authClient, clearSessionCookies } from "@/lib/auth-client";
+import { authClient, retryAfterStaleSession } from "@/lib/auth-client";
 
 import Loader from "./loader";
 
@@ -20,15 +20,12 @@ export default function SignInForm({ onSwitchToSignUp }: { onSwitchToSignUp: () 
       password: "",
     },
     onSubmit: async ({ value }) => {
-      const credentials = {
-        email: value.email,
-        password: value.password,
-      };
-      let result = await authClient.signIn.email(credentials);
-      if (result.error?.status === 403) {
-        clearSessionCookies();
-        result = await authClient.signIn.email(credentials);
-      }
+      const result = await retryAfterStaleSession(() =>
+        authClient.signIn.email({
+          email: value.email,
+          password: value.password,
+        }),
+      );
       if (result.error) {
         toast.error(result.error.message || result.error.statusText);
         return;
