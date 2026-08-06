@@ -46,7 +46,7 @@ export default function NotesDashboard({ name }: { name: string }) {
   const searchParams = useSearchParams();
   const q = searchParams.get("q") ?? "";
   const activeTags = searchParams.get("tags")?.split(",").filter(Boolean) ?? [];
-  const dir = searchParams.get("dir") ?? "desc";
+  const dir = searchParams.get("dir") === "asc" ? "asc" : "desc";
 
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,15 +59,17 @@ export default function NotesDashboard({ name }: { name: string }) {
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Note | null>(null);
   const [qDraft, setQDraft] = useState(q);
-  const qDraftRef = useRef(qDraft);
-  qDraftRef.current = qDraft;
+  const loadSeq = useRef(0);
 
   useEffect(() => {
     setQDraft(q);
   }, [q]);
 
   const pushParams = useCallback(
-    (changes: Record<string, string | string[] | null>) => {
+    (
+      changes: Record<string, string | string[] | null>,
+      behavior: "replace" | "push" = "replace",
+    ) => {
       const params = new URLSearchParams(searchParams.toString());
       for (const [key, value] of Object.entries(changes)) {
         if (value === null || value === "" || (Array.isArray(value) && value.length === 0)) {
@@ -77,7 +79,9 @@ export default function NotesDashboard({ name }: { name: string }) {
         }
       }
       const qs = params.toString();
-      router.replace(qs ? `/dashboard?${qs}` : "/dashboard", { scroll: false });
+      const href = qs ? `/dashboard?${qs}` : "/dashboard";
+      if (behavior === "push") router.push(href, { scroll: false });
+      else router.replace(href, { scroll: false });
     },
     [router, searchParams],
   );
@@ -94,10 +98,12 @@ export default function NotesDashboard({ name }: { name: string }) {
   }, [q, activeTags, dir]);
 
   const load = useCallback(async () => {
+    const seq = ++loadSeq.current;
     const [list, tagList] = await Promise.all([
       api<Note[]>(listUrl()),
       api<{ name: string }[]>("/api/tags"),
     ]);
+    if (seq !== loadSeq.current) return;
     setNotes(list);
     setAllTags(tagList.map((t) => t.name));
     setLoading(false);
@@ -109,7 +115,7 @@ export default function NotesDashboard({ name }: { name: string }) {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (qDraftRef.current !== q) pushParams({ q: qDraftRef.current || null });
+      if (qDraft !== q) pushParams({ q: qDraft || null });
     }, 300);
     return () => clearTimeout(timer);
   }, [qDraft, q, pushParams]);
@@ -118,7 +124,7 @@ export default function NotesDashboard({ name }: { name: string }) {
     const next = activeTags.includes(tag)
       ? activeTags.filter((t) => t !== tag)
       : [...activeTags, tag];
-    pushParams({ tags: next });
+    pushParams({ tags: next }, "push");
   };
 
   const clearFilters = () => pushParams({ q: null, tags: null, dir: null });
@@ -152,8 +158,12 @@ export default function NotesDashboard({ name }: { name: string }) {
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ title: title.trim(), body, tags }),
         });
-        setNotes((prev) => prev.map((n) => (n.id === selectedId ? updated : n)));
         setAllTags((prev) => [...new Set([...prev, ...updated.tags])]);
+        if (hasFilters) {
+          await load();
+        } else {
+          setNotes((prev) => prev.map((n) => (n.id === selectedId ? updated : n)));
+        }
         toast.success("Note saved");
       } else {
         const created = await api<Note>("/api/notes", {
@@ -161,9 +171,13 @@ export default function NotesDashboard({ name }: { name: string }) {
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ title: title.trim(), body, tags }),
         });
-        setNotes((prev) => [created, ...prev]);
         setAllTags((prev) => [...new Set([...prev, ...created.tags])]);
         setSelectedId(created.id);
+        if (hasFilters) {
+          await load();
+        } else {
+          setNotes((prev) => [created, ...prev]);
+        }
         toast.success("Note created");
       }
     } catch (e) {
@@ -171,7 +185,7 @@ export default function NotesDashboard({ name }: { name: string }) {
     } finally {
       setSaving(false);
     }
-  }, [selectedId, title, body, tags, saving]);
+  }, [selectedId, title, body, tags, saving, hasFilters, load]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -219,6 +233,7 @@ export default function NotesDashboard({ name }: { name: string }) {
               id="search-notes"
               placeholder="Search by title…"
               value={qDraft}
+              maxLength={200}
               onChange={(e) => setQDraft(e.target.value)}
               className="text-sm"
             />
@@ -230,7 +245,7 @@ export default function NotesDashboard({ name }: { name: string }) {
             <select
               id="sort-notes"
               value={dir}
-              onChange={(e) => pushParams({ dir: e.target.value })}
+              onChange={(e) => pushParams({ dir: e.target.value }, "push")}
               className="border-input bg-background h-9 w-full border px-2 text-sm"
             >
               <option value="desc">Newest first</option>
@@ -397,7 +412,12 @@ export default function NotesDashboard({ name }: { name: string }) {
             <Button
               variant="destructive"
               disabled={!selectedId}
-              onClick={() => setDeleteTarget(notes.find((n) => n.id === selectedId) ?? null)}
+              onClick={() =>
+                setDeleteTarget(
+                  notes.find((n) => n.id === selectedId) ??
+                    (selectedId ? { ...emptyNote, id: selectedId, title } : null),
+                )
+              }
             >
               Delete
             </Button>

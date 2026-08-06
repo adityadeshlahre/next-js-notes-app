@@ -4,7 +4,8 @@ export const tagNameSchema = z
   .string()
   .trim()
   .min(1, "Tag cannot be empty")
-  .max(50, "Tag is too long");
+  .max(50, "Tag is too long")
+  .refine((name) => !name.includes(","), "Commas are not allowed in tag names");
 
 export const tagsSchema = z.array(tagNameSchema).max(20, "Too many tags");
 
@@ -25,7 +26,7 @@ export const noteIdSchema = z.object({
 });
 
 export const listNotesQuerySchema = z.object({
-  q: z.string().max(200, "Search is too long").optional(),
+  q: z.string().trim().max(200, "Search is too long").optional(),
   tags: z.string().max(500).optional(),
   sort: z.literal("createdAt").default("createdAt"),
   dir: z.enum(["asc", "desc"]).default("desc"),

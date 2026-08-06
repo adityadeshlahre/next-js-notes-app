@@ -332,6 +332,39 @@ describe("notes filters", { sequential: true }, () => {
     expect(list.map((n) => n.title)).toEqual(["Meeting ideas", "Meeting notes"]);
   });
 
+  it("treats LIKE wildcards in search input literally", async () => {
+    const token = await signUpCookie("karl@example.com");
+    await seedNotes(token, [
+      { title: "grow 100% bigger" },
+      { title: "grow 100 times bigger" },
+      { title: "under_score note" },
+    ]);
+
+    const percentRes = await listNotes(
+      new Request(`${BASE}/api/notes?q=100%25`, { headers: headers(token) }),
+    );
+    const percentList = (await percentRes.json()) as { title: string }[];
+    expect(percentList.map((n) => n.title)).toEqual(["grow 100% bigger"]);
+
+    const underscoreRes = await listNotes(
+      new Request(`${BASE}/api/notes?q=under_score`, { headers: headers(token) }),
+    );
+    const underscoreList = (await underscoreRes.json()) as { title: string }[];
+    expect(underscoreList.map((n) => n.title)).toEqual(["under_score note"]);
+  });
+
+  it("ignores whitespace-only search input", async () => {
+    const token = await signUpCookie("lana@example.com");
+    await seedNotes(token, [{ title: "alpha" }, { title: "beta" }]);
+
+    const res = await listNotes(
+      new Request(`${BASE}/api/notes?q=%20%20`, { headers: headers(token) }),
+    );
+    expect(res.status).toBe(200);
+    const list = (await res.json()) as { title: string }[];
+    expect(list).toHaveLength(2);
+  });
+
   it("returns 400 for an invalid sort direction", async () => {
     const token = await signUpCookie("jack@example.com");
 
