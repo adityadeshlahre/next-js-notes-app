@@ -33,13 +33,24 @@ const emptyNote: Note = {
   updatedAt: "",
 };
 
-async function api<T>(url: string, init?: RequestInit): Promise<T> {
+async function doFetch<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, init);
   if (!res.ok) {
     const body = (await res.json().catch(() => null)) as { message?: string } | null;
     throw new Error(body?.message ?? "Request failed");
   }
   return res.json() as Promise<T>;
+}
+
+const inflight = new Map<string, Promise<unknown>>();
+
+async function api<T>(url: string, init?: RequestInit): Promise<T> {
+  const key = `${init?.method ?? "GET"} ${url}`;
+  const existing = inflight.get(key);
+  if (existing) return existing as Promise<T>;
+  const promise = doFetch<T>(url, init).finally(() => inflight.delete(key));
+  inflight.set(key, promise);
+  return promise;
 }
 
 export default function NotesDashboard({ name }: { name: string }) {
