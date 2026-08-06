@@ -32,9 +32,9 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <Providers>
-          <div className="grid grid-rows-[auto_1fr] h-svh">
+          <div className="grid h-svh grid-rows-[auto_1fr]">
             <Header />
-            {children}
+            <main className="min-h-0">{children}</main>
           </div>
         </Providers>
       </body>

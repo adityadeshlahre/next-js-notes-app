@@ -16,6 +16,7 @@ import { toast } from "sonner";
 
 import FilterSidebar from "@/components/filter-sidebar";
 import NotesList from "@/components/notes-list";
+import TagCombobox from "@/components/tag-combobox";
 import { api, emptyNote, type Note } from "@/lib/notes-api";
 
 function NotesDashboard({ name }: { name: string }) {
@@ -70,15 +71,26 @@ function NotesDashboard({ name }: { name: string }) {
     setTagInput("");
   }, []);
 
-  const addTag = useCallback(() => {
-    const name = tagInput.trim().toLowerCase();
-    if (!name) return;
-    if (!tags.includes(name)) setTags((prev) => [...prev, name]);
-    setTagInput("");
-  }, [tagInput, tags]);
+  const addTag = useCallback(
+    (name?: string) => {
+      const tag = (name ?? tagInput).trim().toLowerCase();
+      if (!tag) return;
+      if (!tags.includes(tag)) setTags((prev) => [...prev, tag]);
+      setTagInput("");
+    },
+    [tagInput, tags],
+  );
 
   const removeTag = useCallback((tag: string) => {
     setTags((prev) => prev.filter((t) => t !== tag));
+  }, []);
+
+  const backToList = useCallback(() => {
+    setSelectedId(null);
+    setTitle("");
+    setBody("");
+    setTags([]);
+    setTagInput("");
   }, []);
 
   const requestDelete = useCallback(() => {
@@ -189,6 +201,7 @@ function NotesDashboard({ name }: { name: string }) {
         onRemoveTag={removeTag}
         onSave={save}
         onRequestDelete={requestDelete}
+        onBackToList={backToList}
       />
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
@@ -220,10 +233,11 @@ type NoteEditorProps = {
   onTitleChange: (value: string) => void;
   onBodyChange: (value: string) => void;
   onTagInputChange: (value: string) => void;
-  onAddTag: () => void;
+  onAddTag: (tag?: string) => void;
   onRemoveTag: (tag: string) => void;
   onSave: () => void;
   onRequestDelete: () => void;
+  onBackToList: () => void;
 };
 
 const NoteEditor = memo(function NoteEditor({
@@ -241,9 +255,21 @@ const NoteEditor = memo(function NoteEditor({
   onRemoveTag,
   onSave,
   onRequestDelete,
+  onBackToList,
 }: NoteEditorProps) {
+  const tagSuggestions = allTags.filter((t) => !tags.includes(t));
+
   return (
     <section aria-label="Note editor" className="flex h-full flex-col p-4">
+      {selectedId && (
+        <button
+          type="button"
+          onClick={onBackToList}
+          className="text-muted-foreground hover:text-foreground mb-2 self-start text-sm md:hidden"
+        >
+          ← Back to notes
+        </button>
+      )}
       <Input
         aria-label="Note title"
         placeholder="Note title"
@@ -280,30 +306,16 @@ const NoteEditor = memo(function NoteEditor({
           </div>
         )}
         <div className="flex items-center gap-2">
-          <Input
-            aria-label="Add tag"
-            placeholder="Add a tag…"
-            list="tag-suggestions"
+          <TagCombobox
             value={tagInput}
-            onChange={(e) => onTagInputChange(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                onAddTag();
-              }
-            }}
-            className="max-w-56 text-sm"
+            onChange={onTagInputChange}
+            options={tagSuggestions}
+            onCommit={onAddTag}
+            onCommitNew={() => onAddTag()}
           />
-          <Button type="button" variant="outline" size="sm" onClick={onAddTag}>
+          <Button type="button" variant="outline" size="sm" onClick={() => onAddTag()}>
             Add
           </Button>
-          <datalist id="tag-suggestions">
-            {allTags
-              .filter((t) => !tags.includes(t) && t.includes(tagInput.trim().toLowerCase()))
-              .map((t) => (
-                <option key={t} value={t} />
-              ))}
-          </datalist>
         </div>
       </div>
       <div className="mt-3 flex items-center justify-between">
