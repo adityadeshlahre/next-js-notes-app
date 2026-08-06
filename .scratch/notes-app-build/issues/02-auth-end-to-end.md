@@ -4,7 +4,7 @@
 
 **Blocked by:** 01 (build harness)
 
-**Status:** ready-for-human
+**Status:** ready-for-agent
 
 - [x] Sign up creates a user with bcryptjs-hashed password
 - [x] Sign in/logged-in session persists via httpOnly cookies
@@ -12,5 +12,10 @@
 - [x] Unauthenticated visit to `/dashboard` redirects to `/login`
 - [x] Integration tests cover signup, signin, signout
 - [x] Test asserts password stored is bcryptjs, not plaintext
+
+## Comments
+
+- 2026-08-06: Implemented (commit 65ef982). All checks green; review findings fixed (commit pending): proxy-level redirect test, sign-out via HTTP route test, forged-cookie re-check test, shared test-DB URL derivation (`tests/test-env.ts`), test helpers to dedupe signup blocks, cookie-name constant.
+- Note: the auth schema migration (`packages/db/src/migrations/0000_ordinary_hex.sql`) is the first migration in the repo — it materializes the scaffold's existing schema so the test DB can be migrated in global-setup; no runtime schema change.
 
 Source: `.scratch/notes-app/spec.md` §2 (auth); wayfinder tickets `password-hash`, `route-guard`.

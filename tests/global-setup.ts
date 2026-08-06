@@ -2,11 +2,12 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import pg from "pg";
 
+import { TEST_DB, testDatabaseUrl } from "./test-env.ts";
+
 const { Client, Pool } = pg;
 
 const DEV_URL =
   process.env.DATABASE_URL ?? "postgresql://postgres:password@localhost:5432/next-js-notes-app";
-const TEST_DB = "notes_app_test";
 
 export default async function globalSetup() {
   const server = new URL(DEV_URL);
@@ -19,11 +20,10 @@ export default async function globalSetup() {
   }
   await admin.end();
 
-  const testUrl = new URL(DEV_URL);
-  testUrl.pathname = `/${TEST_DB}`;
-  process.env.TEST_DATABASE_URL = testUrl.toString();
+  const testUrl = testDatabaseUrl(DEV_URL);
+  process.env.TEST_DATABASE_URL = testUrl;
 
-  await migrate(drizzle(new Pool({ connectionString: testUrl.toString() })), {
+  await migrate(drizzle(new Pool({ connectionString: testUrl })), {
     migrationsFolder: "packages/db/src/migrations",
   });
 }
