@@ -12,17 +12,18 @@ export default function LoginView({ initialSignIn }: { initialSignIn: boolean })
   const router = useRouter();
   const [showSignIn, setShowSignIn] = useState(initialSignIn);
 
-  const { data: session, isPending } = authClient.useSession();
-
   useEffect(() => {
-    if (!isPending && session) {
-      router.replace("/dashboard");
-    }
-  }, [isPending, session, router]);
-
-  if (isPending) {
-    return null;
-  }
+    let active = true;
+    authClient
+      .getSession()
+      .then(({ data }) => {
+        if (active && data?.session) router.replace("/dashboard");
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [router]);
 
   return showSignIn ? (
     <SignInForm onSwitchToSignUp={() => setShowSignIn(false)} />

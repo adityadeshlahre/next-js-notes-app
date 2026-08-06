@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import z from "zod";
 
-import { authClient } from "@/lib/auth-client";
+import { authClient, clearSessionCookies } from "@/lib/auth-client";
 
 import Loader from "./loader";
 
@@ -21,22 +21,22 @@ export default function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () 
       name: "",
     },
     onSubmit: async ({ value }) => {
-      await authClient.signUp.email(
-        {
-          email: value.email,
-          password: value.password,
-          name: value.name,
-        },
-        {
-          onSuccess: () => {
-            router.push("/dashboard");
-            toast.success("Sign up successful");
-          },
-          onError: (error) => {
-            toast.error(error.error.message || error.error.statusText);
-          },
-        },
-      );
+      const credentials = {
+        name: value.name,
+        email: value.email,
+        password: value.password,
+      };
+      let result = await authClient.signUp.email(credentials);
+      if (result.error?.status === 403) {
+        clearSessionCookies();
+        result = await authClient.signUp.email(credentials);
+      }
+      if (result.error) {
+        toast.error(result.error.error?.message || result.error.statusText);
+        return;
+      }
+      router.push("/dashboard");
+      toast.success("Sign up successful");
     },
     validators: {
       onSubmit: z.object({
