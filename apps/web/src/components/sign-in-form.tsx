@@ -30,7 +30,7 @@ export default function SignInForm({ onSwitchToSignUp }: { onSwitchToSignUp: () 
         result = await authClient.signIn.email(credentials);
       }
       if (result.error) {
-        toast.error(result.error.error?.message || result.error.statusText);
+        toast.error(result.error.message || result.error.statusText);
         return;
       }
       router.push("/dashboard");
