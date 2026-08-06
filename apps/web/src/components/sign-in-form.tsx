@@ -20,20 +20,21 @@ export default function SignInForm({ onSwitchToSignUp }: { onSwitchToSignUp: () 
       password: "",
     },
     onSubmit: async ({ value }) => {
-      const result = await authClient.signIn.email({
-        email: value.email,
-        password: value.password,
-      });
-      if (result.error) {
-        if (result.error.status === 403) {
-          router.push("/dashboard");
-          return;
-        }
-        toast.error(result.error.message || result.error.statusText);
-        return;
-      }
-      router.push("/dashboard");
-      toast.success("Sign in successful");
+      await authClient.signIn.email(
+        {
+          email: value.email,
+          password: value.password,
+        },
+        {
+          onSuccess: () => {
+            router.push("/dashboard");
+            toast.success("Sign in successful");
+          },
+          onError: (error) => {
+            toast.error(error.error.message || error.error.statusText);
+          },
+        },
+      );
     },
     validators: {
       onSubmit: z.object({
