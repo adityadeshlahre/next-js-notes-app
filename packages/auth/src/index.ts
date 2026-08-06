@@ -11,6 +11,9 @@ export function createAuth() {
   const db = createDb();
 
   return betterAuth({
+    rateLimit: {
+      enabled: false,
+    },
     database: drizzleAdapter(db, {
       provider: "pg",
 
