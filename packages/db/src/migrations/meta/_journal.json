@@ -8,6 +8,13 @@
       "when": 1786008948588,
       "tag": "0000_ordinary_hex",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1786012213652,
+      "tag": "0001_overjoyed_spiral",
+      "breakpoints": true
     }
   ]
 }
