@@ -17,4 +17,6 @@
 
 Vitest 4 at repo root (`vitest.config.ts` + `tests/global-setup.ts` auto-creates `notes_app_test` DB; `tests/harness.test.ts` smoke test). Root `test: vitest run`, `lint: oxlint`. README Testing + Lint sections. Fixed 3 pre-existing scaffold lint errors (schema/index empty export, env/web unused `z`, dashboard unused `session`). All checks green.
 
+Deferred to later tickets (recorded so b07 doesn't rediscover them): **migrations + truncation** land with the schema ticket (no migrations dir exists yet — harness only creates the DB); **turbo-run** backing for `lint`/`test` dropped deliberately (no workspace package defines those scripts yet, so turbo would no-op; revisit when per-package scripts exist). Test env plumbing: `vitest.config.ts` loads `apps/web/.env`; global setup derives `TEST_DATABASE_URL` from `DATABASE_URL`.
+
 Source: `.scratch/notes-app/spec.md` §6 (testing), §8 (lint).

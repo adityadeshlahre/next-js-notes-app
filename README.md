@@ -100,7 +100,7 @@ Runs the Vitest suite against a `notes_app_test` Postgres database (created auto
 
 ## Lint
 
-`npm run lint` runs **oxlint** (not ESLint + Prettier). The scaffold ships oxlint/oxfmt as the lint & format tooling; the alias keeps the assignment's `npm run lint` invocation working. This substitution is a deliberate tradeoff — see the tradeoffs section.
+`npm run lint` runs **oxlint** (not ESLint + Prettier). The scaffold ships oxlint/oxfmt as the lint & format tooling; the alias keeps the assignment's `npm run lint` invocation working. This substitution is a deliberate tradeoff.
 
 ## Project Structure
 
