@@ -30,4 +30,6 @@ ENV HOSTNAME=0.0.0.0
 ENV PORT=3001
 EXPOSE 3001
 
-CMD ["node", "apps/web/server.js"]
+# migrations run on boot (free tier has no preDeployCommand hook); single
+# instance + drizzle's __drizzle_migrations journal make this idempotent
+CMD ["sh", "-c", "node db-migrate.mjs && node apps/web/server.js"]
