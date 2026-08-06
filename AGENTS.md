@@ -4,6 +4,8 @@
 
 All changes are edited in place on the master branch — no worktrees, no feature branches.
 
+Always commit with `--no-gpg-sign` — do not attempt GPG-signed commits in this repo.
+
 ## Agent skills
 
 ### Issue tracker
