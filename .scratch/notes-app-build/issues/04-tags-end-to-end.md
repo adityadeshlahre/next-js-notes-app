@@ -6,11 +6,16 @@
 
 **Status:** ready-for-agent
 
-- [ ] Each note shows its assigned tags
-- [ ] Assigning a tag auto-creates it if the user doesn't have it yet
-- [ ] Removing a tag from a note detaches it
-- [ ] Tags are private per user — never shared across users
-- [ ] Tag name trimmed + lowercased, unique per user
-- [ ] Autocomplete shows existing user tags when typing in the editor
+- [x] Each note shows its assigned tags
+- [x] Assigning a tag auto-creates it if the user doesn't have it yet
+- [x] Removing a tag from a note detaches it
+- [x] Tags are private per user — never shared across users
+- [x] Tag name trimmed + lowercased, unique per user
+- [x] Autocomplete shows existing user tags when typing in the editor
+
+## Comments
+
+- Commits: `?` (fill on commit). Schema: `tags` + `note_tags` in `packages/db/src/schema/tags.ts`, migration `0002_acoustic_spiral.sql`. Shared helpers in `apps/web/src/lib/tags.ts` (`upsertTags` onConflictDoNothing + re-select, `replaceNoteTags` wholesale, `noteTagsByName`). Routes: `GET /api/tags`, notes POST/GET/PATCH now include `tags: string[]` (normalized names from join). PATCH accepts tags-only updates (ownership 404 still enforced). `tests/tags.test.ts` 6 tests: auto-create + normalize + dedupe (DB assert 1 row), list tags, PATCH replace/detach, PATCH [] clears, per-user privacy, autocomplete list sorted. 25 total tests green. UI: tag chips on list items + editor chips w/ ✕ remove, native `<datalist>` autocomplete filtered by prefix, tags sent on save via API.
+- Trimmed+lowercased enforced on write by `normalizeTagName` in `upsertTags`; zod validates length/emptiness.
 
 Source: `.scratch/notes-app/spec.md` §1 (tags + note_tags schema), §3 (implicit create), §4 (tag chips); wayfinder ticket `tag-model`.

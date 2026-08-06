@@ -10,6 +10,7 @@ import {
   firstIssueMessage,
   parseJson,
 } from "@/lib/api-helpers";
+import { noteTagsByName, replaceNoteTags } from "@/lib/tags";
 import { noteIdSchema, updateNoteSchema } from "@/lib/validation";
 
 type Params = { params: Promise<{ id: string }> };
@@ -33,7 +34,9 @@ export async function GET(request: Request, { params }: Params) {
     .where(and(eq(notes.id, id), eq(notes.userId, auth.user.id)));
 
   if (!note) return jsonError(404, "Note not found");
-  return NextResponse.json(note);
+
+  const tagsByNote = await noteTagsByName([note.id]);
+  return NextResponse.json({ ...note, tags: tagsByNote.get(note.id) ?? [] });
 }
 
 export async function PATCH(request: Request, { params }: Params) {
@@ -47,18 +50,33 @@ export async function PATCH(request: Request, { params }: Params) {
   if (!parsed.success) {
     return jsonError(400, firstIssueMessage(parsed.error));
   }
-  if (Object.keys(parsed.data).length === 0) {
+  const { tags: incomingTags, ...fields } = parsed.data;
+  if (Object.keys(fields).length === 0 && incomingTags === undefined) {
     return jsonError(400, "Nothing to update");
   }
 
-  const [note] = await db
-    .update(notes)
-    .set(parsed.data)
-    .where(and(eq(notes.id, id), eq(notes.userId, auth.user.id)))
-    .returning();
+  let note: typeof notes.$inferSelect | undefined;
+  if (Object.keys(fields).length > 0) {
+    [note] = await db
+      .update(notes)
+      .set(fields)
+      .where(and(eq(notes.id, id), eq(notes.userId, auth.user.id)))
+      .returning();
+  } else {
+    [note] = await db
+      .select()
+      .from(notes)
+      .where(and(eq(notes.id, id), eq(notes.userId, auth.user.id)));
+  }
 
   if (!note) return jsonError(404, "Note not found");
-  return NextResponse.json(note);
+
+  if (incomingTags !== undefined) {
+    await replaceNoteTags(note.id, auth.user.id, incomingTags);
+  }
+
+  const tagsByNote = await noteTagsByName([note.id]);
+  return NextResponse.json({ ...note, tags: tagsByNote.get(note.id) ?? [] });
 }
 
 export async function DELETE(request: Request, { params }: Params) {

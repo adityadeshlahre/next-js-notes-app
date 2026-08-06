@@ -13,9 +13,23 @@ import { Textarea } from "@next-js-notes-app/ui/components/textarea";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
-type Note = { id: string; title: string; body: string; createdAt: string; updatedAt: string };
+type Note = {
+  id: string;
+  title: string;
+  body: string;
+  tags: string[];
+  createdAt: string;
+  updatedAt: string;
+};
 
-const emptyNote: Note = { id: "", title: "", body: "", createdAt: "", updatedAt: "" };
+const emptyNote: Note = {
+  id: "",
+  title: "",
+  body: "",
+  tags: [],
+  createdAt: "",
+  updatedAt: "",
+};
 
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, init);
@@ -32,12 +46,19 @@ export default function NotesDashboard({ name }: { name: string }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState("");
+  const [allTags, setAllTags] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Note | null>(null);
 
   const load = useCallback(async () => {
-    const list = await api<Note[]>("/api/notes");
+    const [list, tagList] = await Promise.all([
+      api<Note[]>("/api/notes"),
+      api<{ name: string }[]>("/api/tags"),
+    ]);
     setNotes(list);
+    setAllTags(tagList.map((t) => t.name));
     setLoading(false);
   }, []);
 
@@ -49,6 +70,15 @@ export default function NotesDashboard({ name }: { name: string }) {
     setSelectedId(note.id);
     setTitle(note.title);
     setBody(note.body);
+    setTags(note.tags);
+    setTagInput("");
+  };
+
+  const addTag = () => {
+    const name = tagInput.trim();
+    if (!name) return;
+    if (!tags.some((t) => t === name)) setTags((prev) => [...prev, name]);
+    setTagInput("");
   };
 
   const save = useCallback(async () => {
@@ -63,7 +93,7 @@ export default function NotesDashboard({ name }: { name: string }) {
         const updated = await api<Note>(`/api/notes/${selectedId}`, {
           method: "PATCH",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ title: title.trim(), body }),
+          body: JSON.stringify({ title: title.trim(), body, tags }),
         });
         setNotes((prev) => prev.map((n) => (n.id === selectedId ? updated : n)));
         toast.success("Note saved");
@@ -71,7 +101,7 @@ export default function NotesDashboard({ name }: { name: string }) {
         const created = await api<Note>("/api/notes", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ title: title.trim(), body }),
+          body: JSON.stringify({ title: title.trim(), body, tags }),
         });
         setNotes((prev) => [created, ...prev]);
         setSelectedId(created.id);
@@ -82,7 +112,7 @@ export default function NotesDashboard({ name }: { name: string }) {
     } finally {
       setSaving(false);
     }
-  }, [selectedId, title, body, saving]);
+  }, [selectedId, title, body, tags, saving]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -104,6 +134,8 @@ export default function NotesDashboard({ name }: { name: string }) {
         setSelectedId(null);
         setTitle("");
         setBody("");
+        setTags([]);
+        setTagInput("");
       }
       setDeleteTarget(null);
       toast.success("Note deleted");
@@ -146,6 +178,18 @@ export default function NotesDashboard({ name }: { name: string }) {
                     {note.title || "Untitled"}
                   </span>
                   <span className="block truncate text-xs text-muted-foreground">{note.body}</span>
+                  {note.tags.length > 0 && (
+                    <span className="mt-1 flex flex-wrap gap-1">
+                      {note.tags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="border-border bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </span>
+                  )}
                 </button>
               </li>
             ))}
@@ -168,6 +212,54 @@ export default function NotesDashboard({ name }: { name: string }) {
           onChange={(e) => setBody(e.target.value)}
           className="min-h-64 flex-1 text-sm"
         />
+        <div className="mt-3 space-y-2">
+          {tags.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="border-border bg-muted flex items-center gap-1 px-2 py-0.5 text-xs"
+                >
+                  {tag}
+                  <button
+                    type="button"
+                    aria-label={`Remove tag ${tag}`}
+                    className="text-muted-foreground hover:text-foreground"
+                    onClick={() => setTags((prev) => prev.filter((t) => t !== tag))}
+                  >
+                    ✕
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            <Input
+              aria-label="Add tag"
+              placeholder="Add a tag…"
+              list="tag-suggestions"
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addTag();
+                }
+              }}
+              className="max-w-56 text-sm"
+            />
+            <Button type="button" variant="outline" size="sm" onClick={addTag}>
+              Add
+            </Button>
+            <datalist id="tag-suggestions">
+              {allTags
+                .filter((t) => !tags.includes(t) && t.includes(tagInput.trim().toLowerCase()))
+                .map((t) => (
+                  <option key={t} value={t} />
+                ))}
+            </datalist>
+          </div>
+        </div>
         <div className="mt-3 flex items-center justify-between">
           <p className="text-xs text-muted-foreground">Ctrl/⌘+S to save</p>
           <div className="flex gap-2">
