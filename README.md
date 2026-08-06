@@ -90,6 +90,18 @@ For more details, see the guide on [Deploying with Docker Compose](https://www.b
 - Initialize hooks: `bun run prepare`
 - Run checks: `bun run check`
 
+## Testing
+
+```bash
+npm run test
+```
+
+Runs the Vitest suite against a `notes_app_test` Postgres database (created automatically by the global setup; requires the docker-compose Postgres to be running).
+
+## Lint
+
+`npm run lint` runs **oxlint** (not ESLint + Prettier). The scaffold ships oxlint/oxfmt as the lint & format tooling; the alias keeps the assignment's `npm run lint` invocation working. This substitution is a deliberate tradeoff — see the tradeoffs section.
+
 ## Project Structure
 
 ```
@@ -113,6 +125,8 @@ next-js-notes-app/
 - `bun run db:migrate`: Run database migrations
 - `bun run db:studio`: Open database studio UI
 - `bun run check`: Run Oxlint and Oxfmt
+- `npm run lint`: Run Oxlint (assignment-compatible alias)
+- `npm run test`: Run the Vitest suite (requires Postgres running)
 - `bun run docker:build`: Build the Docker Compose images
 - `bun run docker:up`: Build and start the Docker Compose stack
 - `bun run docker:logs`: Tail logs from the Docker Compose stack

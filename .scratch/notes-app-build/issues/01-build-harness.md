@@ -4,11 +4,17 @@
 
 **Blocked by:** None — can start immediately.
 
+# 01 — Build harness
+
 **Status:** ready-for-agent
 
-- [ ] Root `npm run test` exists and runs a Vitest suite against Postgres
-- [ ] Root `npm run lint` exists and passes (oxlint)
-- [ ] A trivial placeholder test runs green against the test DB
-- [ ] README notes the lint substitution
+- [x] Root `npm run test` exists and runs a Vitest suite against Postgres
+- [x] Root `npm run lint` exists and passes (oxlint)
+- [x] A trivial placeholder test runs green against the test DB
+- [x] README notes the lint substitution
+
+## Done
+
+Vitest 4 at repo root (`vitest.config.ts` + `tests/global-setup.ts` auto-creates `notes_app_test` DB; `tests/harness.test.ts` smoke test). Root `test: vitest run`, `lint: oxlint`. README Testing + Lint sections. Fixed 3 pre-existing scaffold lint errors (schema/index empty export, env/web unused `z`, dashboard unused `session`). All checks green.
 
 Source: `.scratch/notes-app/spec.md` §6 (testing), §8 (lint).
