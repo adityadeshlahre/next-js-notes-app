@@ -16,21 +16,26 @@ export default function LoginView({ initialSignIn }: { initialSignIn: boolean })
 
   useEffect(() => {
     let active = true;
+
+    const showForm = () => {
+      if (active) setCheckingSession(false);
+    };
+    const guard = setTimeout(showForm, 5000);
+
     authClient
       .getSession()
       .then(({ data }) => {
-        if (!active) return;
-        setCheckingSession(false);
+        showForm();
         if (data?.session) router.replace("/dashboard");
       })
       .catch((error) => {
-        if (!active) return;
-        setCheckingSession(false);
+        showForm();
         // [login-view] session check failed — log it, don't block the form
         console.error("[login-view] getSession failed", error);
       });
     return () => {
       active = false;
+      clearTimeout(guard);
     };
   }, [router]);
 
