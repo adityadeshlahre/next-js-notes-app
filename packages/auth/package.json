@@ -13,6 +13,7 @@
   "dependencies": {
     "@next-js-notes-app/db": "workspace:*",
     "@next-js-notes-app/env": "workspace:*",
+    "bcryptjs": "^3.0.2",
     "better-auth": "catalog:",
     "dotenv": "catalog:",
     "zod": "catalog:"

@@ -4,13 +4,13 @@
 
 **Blocked by:** 01 (build harness)
 
-**Status:** ready-for-agent
+**Status:** ready-for-human
 
-- [ ] Sign up creates a user with bcryptjs-hashed password
-- [ ] Sign in/logged-in session persists via httpOnly cookies
-- [ ] Sign out clears the session
-- [ ] Unauthenticated visit to `/dashboard` redirects to `/login`
-- [ ] Integration tests cover signup, signin, signout
-- [ ] Test asserts password stored is bcryptjs, not plaintext
+- [x] Sign up creates a user with bcryptjs-hashed password
+- [x] Sign in/logged-in session persists via httpOnly cookies
+- [x] Sign out clears the session
+- [x] Unauthenticated visit to `/dashboard` redirects to `/login`
+- [x] Integration tests cover signup, signin, signout
+- [x] Test asserts password stored is bcryptjs, not plaintext
 
 Source: `.scratch/notes-app/spec.md` §2 (auth); wayfinder tickets `password-hash`, `route-guard`.

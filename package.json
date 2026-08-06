@@ -51,9 +51,12 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@next-js-notes-app/auth": "workspace:*",
     "@next-js-notes-app/config": "workspace:*",
+    "@next-js-notes-app/db": "workspace:*",
     "@types/node": "^22.20.1",
     "@types/pg": "^8.20.0",
+    "drizzle-orm": "^0.45.2",
     "husky": "^9.1.7",
     "lefthook": "^2.1.10",
     "lint-staged": "^17.2.0",
