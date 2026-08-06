@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import z from "zod";
 
-import { authClient, retryAfterStaleSession } from "@/lib/auth-client";
+import { authClient } from "@/lib/auth-client";
 
 import Loader from "./loader";
 
@@ -21,14 +21,16 @@ export default function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () 
       name: "",
     },
     onSubmit: async ({ value }) => {
-      const result = await retryAfterStaleSession(() =>
-        authClient.signUp.email({
-          name: value.name,
-          email: value.email,
-          password: value.password,
-        }),
-      );
+      const result = await authClient.signUp.email({
+        name: value.name,
+        email: value.email,
+        password: value.password,
+      });
       if (result.error) {
+        if (result.error.status === 403) {
+          router.push("/dashboard");
+          return;
+        }
         toast.error(result.error.message || result.error.statusText);
         return;
       }
