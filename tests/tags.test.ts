@@ -81,7 +81,7 @@ describe("tags", { sequential: true }, () => {
     const res = await listNotes(new Request(`${BASE}/api/notes`, { headers: headers(token) }));
     expect(res.status).toBe(200);
     const notes = (await res.json()) as { title: string; tags: string[] }[];
-    expect(notes[0].tags).toEqual(["shopping", "errands"]);
+    expect(notes[0].tags).toEqual(["errands", "shopping"]);
   });
 
   it("replaces tags wholesale on PATCH, detaching removed ones", async () => {
@@ -143,5 +143,25 @@ describe("tags", { sequential: true }, () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as { name: string }[];
     expect(body.map((t) => t.name)).toEqual(["personal", "work"]);
+  });
+
+  it("does not let another user change tags via a tags-only PATCH", async () => {
+    const tokenA = await signUpCookie("owner2@example.com");
+    const tokenB = await signUpCookie("intruder2@example.com");
+    const created = await createNoteWithTags(tokenA, "Secret", ["PrivateTag"]);
+
+    const res = await updateNote(
+      new Request(`${BASE}/api/notes/${created.id}`, {
+        method: "PATCH",
+        headers: jsonHeaders(tokenB),
+        body: JSON.stringify({ tags: ["Hacked"] }),
+      }),
+      { params: Promise.resolve({ id: created.id }) },
+    );
+    expect(res.status).toBe(404);
+
+    const listRes = await listNotes(new Request(`${BASE}/api/notes`, { headers: headers(tokenA) }));
+    const [note] = (await listRes.json()) as { tags: string[] }[];
+    expect(note.tags).toEqual(["privatetag"]);
   });
 });

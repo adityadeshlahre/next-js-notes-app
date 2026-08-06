@@ -1,4 +1,3 @@
-import { relations } from "drizzle-orm";
 import { pgTable, text, timestamp, uuid, index, unique } from "drizzle-orm/pg-core";
 
 import { user } from "./auth";
@@ -36,22 +35,3 @@ export const noteTags = pgTable(
   },
   (table) => [unique("note_tags_noteId_tagId_unique").on(table.noteId, table.tagId)],
 );
-
-export const tagsRelations = relations(tags, ({ one, many }) => ({
-  user: one(user, {
-    fields: [tags.userId],
-    references: [user.id],
-  }),
-  noteTags: many(noteTags),
-}));
-
-export const noteTagsRelations = relations(noteTags, ({ one }) => ({
-  note: one(notes, {
-    fields: [noteTags.noteId],
-    references: [notes.id],
-  }),
-  tag: one(tags, {
-    fields: [noteTags.tagId],
-    references: [tags.id],
-  }),
-}));

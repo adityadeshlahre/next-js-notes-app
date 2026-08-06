@@ -25,7 +25,9 @@ const auth = createAuth();
 const truncate = async () => {
   const admin = new Client({ connectionString: process.env.TEST_DATABASE_URL });
   await admin.connect();
-  await admin.query(`TRUNCATE "notes", "user", "session", "account", "verification" CASCADE`);
+  await admin.query(
+    `TRUNCATE "note_tags", "tags", "notes", "user", "session", "account", "verification" CASCADE`,
+  );
   await admin.end();
 };
 

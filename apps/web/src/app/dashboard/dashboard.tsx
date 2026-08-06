@@ -75,9 +75,9 @@ export default function NotesDashboard({ name }: { name: string }) {
   };
 
   const addTag = () => {
-    const name = tagInput.trim();
+    const name = tagInput.trim().toLowerCase();
     if (!name) return;
-    if (!tags.some((t) => t === name)) setTags((prev) => [...prev, name]);
+    if (!tags.includes(name)) setTags((prev) => [...prev, name]);
     setTagInput("");
   };
 
@@ -96,6 +96,7 @@ export default function NotesDashboard({ name }: { name: string }) {
           body: JSON.stringify({ title: title.trim(), body, tags }),
         });
         setNotes((prev) => prev.map((n) => (n.id === selectedId ? updated : n)));
+        setAllTags((prev) => [...new Set([...prev, ...updated.tags])]);
         toast.success("Note saved");
       } else {
         const created = await api<Note>("/api/notes", {
@@ -104,6 +105,7 @@ export default function NotesDashboard({ name }: { name: string }) {
           body: JSON.stringify({ title: title.trim(), body, tags }),
         });
         setNotes((prev) => [created, ...prev]);
+        setAllTags((prev) => [...new Set([...prev, ...created.tags])]);
         setSelectedId(created.id);
         toast.success("Note created");
       }
