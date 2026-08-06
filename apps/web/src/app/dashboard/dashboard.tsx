@@ -98,21 +98,26 @@ export default function NotesDashboard({ name }: { name: string }) {
     return qs ? `/api/notes?${qs}` : "/api/notes";
   }, [q, activeTags, dir]);
 
-  const load = useCallback(async () => {
+  const loadNotes = useCallback(async () => {
     const seq = ++loadSeq.current;
-    const [list, tagList] = await Promise.all([
-      api<Note[]>(listUrl()),
-      api<{ name: string }[]>("/api/tags"),
-    ]);
+    const list = await api<Note[]>(listUrl());
     if (seq !== loadSeq.current) return;
     setNotes(list);
-    setAllTags(tagList.map((t) => t.name));
     setLoading(false);
   }, [listUrl]);
 
+  const loadTags = useCallback(async () => {
+    const tagList = await api<{ name: string }[]>("/api/tags");
+    setAllTags(tagList.map((t) => t.name));
+  }, []);
+
   useEffect(() => {
-    load().catch((e: Error) => toast.error(e.message));
-  }, [load]);
+    loadNotes().catch((e: Error) => toast.error(e.message));
+  }, [loadNotes]);
+
+  useEffect(() => {
+    loadTags().catch(() => undefined);
+  }, [loadTags]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -161,7 +166,7 @@ export default function NotesDashboard({ name }: { name: string }) {
         });
         setAllTags((prev) => [...new Set([...prev, ...updated.tags])]);
         if (hasFilters) {
-          await load();
+          await loadNotes();
         } else {
           setNotes((prev) => prev.map((n) => (n.id === selectedId ? updated : n)));
         }
@@ -175,7 +180,7 @@ export default function NotesDashboard({ name }: { name: string }) {
         setAllTags((prev) => [...new Set([...prev, ...created.tags])]);
         setSelectedId(created.id);
         if (hasFilters) {
-          await load();
+          await loadNotes();
         } else {
           setNotes((prev) => [created, ...prev]);
         }
@@ -186,7 +191,7 @@ export default function NotesDashboard({ name }: { name: string }) {
     } finally {
       setSaving(false);
     }
-  }, [selectedId, title, body, tags, saving, hasFilters, load]);
+  }, [selectedId, title, body, tags, saving, hasFilters, loadNotes]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
