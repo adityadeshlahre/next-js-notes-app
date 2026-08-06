@@ -7,7 +7,7 @@ import LoginView from "./login-view";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ signin?: string }>;
+  searchParams: Promise<{ signup?: string }>;
 }) {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -17,6 +17,6 @@ export default async function LoginPage({
     redirect("/dashboard");
   }
 
-  const { signin } = await searchParams;
-  return <LoginView initialSignIn={signin === "1"} />;
+  const { signup } = await searchParams;
+  return <LoginView initialSignIn={signup !== "1"} />;
 }
