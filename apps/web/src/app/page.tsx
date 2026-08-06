@@ -20,8 +20,10 @@ export default async function HomePage() {
         Create, tag, search, and organize your notes — private to you.
       </p>
       <div className="mt-6 flex gap-3">
-        <Button render={<Link href="/login" />}>Create your first note</Button>
-        <Button render={<Link href="/login?signin=1" />} variant="outline">
+        <Button render={<Link href="/login" />} nativeButton={false}>
+          Create your first note
+        </Button>
+        <Button render={<Link href="/login?signin=1" />} variant="outline" nativeButton={false}>
           Already a user? Sign in
         </Button>
       </div>
