@@ -1,7 +1,7 @@
 # 05 — Note model & CRUD semantics
 
 Type: grilling
-Status: open
+Status: resolved
 Blocked by:
 
 ## Question
@@ -16,3 +16,7 @@ Spec decisions needed:
 - Update: full replace of title+body, or PATCH semantics?
 
 Recommended shape: REST endpoints `GET/POST /api/notes`, `GET/PATCH/DELETE /api/notes/:id`, all scoped by session `userId`, 404 on cross-user, hard delete, 400 on invalid input.
+
+## Answer
+
+**Standard model, 404-hide, hard delete.** Columns: `id` (uuid), `userId` FK, `title`, `body`, `createdAt`, `updatedAt`. Every query scoped by session `userId`; cross-user access returns 404 (no existence leak). Hard delete. PATCH semantics (partial update of title and/or body), 400 on Zod-invalid input. Endpoints: `GET/POST /api/notes`, `GET/PATCH/DELETE /api/notes/:id`.

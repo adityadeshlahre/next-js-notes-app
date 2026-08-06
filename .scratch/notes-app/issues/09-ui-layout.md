@@ -1,7 +1,7 @@
 # 09 — UI layout prototype
 
 Type: prototype
-Status: open
+Status: resolved
 Blocked by: 08
 
 ## Question
@@ -16,3 +16,7 @@ Prototype a rough take (stub HTML/CSS or a shadcn component sketch) for the huma
 - Semantic structure: `<main>`, `<nav>`, `<section>`, labels, ARIA for tag chips.
 
 Link the prototype as an asset here; resolve when the human has reacted.
+
+## Answer
+
+**Approved as sketched** — asset: [`prototypes/ui-layout.md`](../prototypes/ui-layout.md). Three-column dashboard (filters sidebar | note list | editor pane), URL-driven filter state, tag chips with implicit creation + autocomplete, Ctrl/Cmd+S save, AlertDialog delete, `aria-pressed` toggle chips, responsive stack below `md`.

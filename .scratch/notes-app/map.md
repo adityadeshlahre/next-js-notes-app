@@ -19,15 +19,21 @@ A decision-complete **implementation spec** for the ASSIGNMENT.md Notes app (aut
 
 - [password-hash](issues/03-password-hash.md) — switch better-auth to bcryptjs via `emailAndPassword.password.{hash,verify}`; no schema change, no migration risk.
 - [render-deploy](issues/11-render-deploy.md) — render.yaml blueprint, docker runtime, `fromDatabase` internal URL, preDeployCommand migrations, existing Dockerfile reused as-is.
+- [api-layer](issues/01-api-layer.md) — REST route handlers under `app/api/*` for notes/tags CRUD; unblocks test-strategy.
+- [lint-strategy](issues/02-lint-strategy.md) — keep oxlint/oxfmt, add a `npm run lint` alias via turbo; README documents the ESLint/Prettier substitution.
+- [route-guard](issues/04-route-guard.md) — middleware cookie guard via `getSessionCookie` + per-page `getSession` re-check; single redirect to /login.
+- [note-model](issues/05-note-model.md) — id/userId/title/body/timestamps; session-scoped queries, 404-hide on cross-user, hard delete, PATCH semantics; unblocks tag-model.
+- [tag-model](issues/06-tag-model.md) — private per-user tags (trimmed/lowercased, unique per user) + `note_tags` join; implicit creation on assign; no standalone tag CRUD.
+- [filter-sort-search](issues/07-filter-sort-search.md) — AND semantics for multi-tag, ILIKE title search, createdAt sort, all state in URL search params, single server query.
+- [note-editor-format](issues/08-note-editor-format.md) — plain textarea + `whitespace-pre-wrap` rendering, zero deps; unblocks ui-layout.
+- [ui-layout](issues/09-ui-layout.md) — approved three-column dashboard sketch (`prototypes/ui-layout.md`): URL-driven state, tag chips + autocomplete, Cmd/Ctrl+S, AlertDialog delete, responsive stack.
+- [test-strategy](issues/10-test-strategy.md) — Vitest + real Postgres (separate test DB), in-process route-handler integration tests covering auth/ownership/filter-sort; TDD on critical paths.
+- [a11y-pass](issues/12-a11y-pass.md) — axe-core assertions in Vitest per page + a11y baked into features; manual Lighthouse pass as pre-deploy release gate.
+- [spec-consolidation](issues/13-spec-consolidation.md) — **spec written** (`spec.md`): schema, API contract, UI, tests, Render deploy, deliverables — map destination reached.
 
 ## Not yet specified
 
-- Precise DDL (columns, constraints, indexes) — graduates from note-model and tag-model tickets.
-- Validation layer layout (where Zod schemas live, shared vs per-route) — graduates from api-layer.
-- File/folder structure for the app (routes, components, lib) — graduates from api-layer and ui-layout.
-- Test-data strategy (seeds, fixtures, test DB lifecycle) — graduates from test-strategy.
-- Render service config details (service name, region, healthcheck) — graduates from render-deploy.
-- Deliverables execution plan (README structure, repo creation, test account seeding) — graduates from spec-consolidation.
+<!-- the fog has cleared — all patches graduated into `spec.md` (see Decisions so far, spec-consolidation) -->
 
 ## Out of scope
 

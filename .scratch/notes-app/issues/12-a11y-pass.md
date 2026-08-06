@@ -1,7 +1,7 @@
 # 12 — Accessibility bar
 
 Type: grilling
-Status: open
+Status: resolved
 Blocked by:
 
 ## Question
@@ -13,3 +13,7 @@ Decisions needed:
 - Tooling: axe-core + @axe-core/playwright or just Lighthouse in manual QA? (recommended: axe in automated tests or CI check + Lighthouse manual pass before deploy)
 - Does the a11y pass land as part of the build spec (tasks inside each feature: semantic HTML, labels, keyboard flow) or as a standalone review task before deploy? (recommended: baked into features, reviewed at the end)
 - Target: axe all-green (no serious/critical), keyboard-only walkthrough of every flow, semantic landmarks.
+
+## Answer
+
+**axe in tests + baked-in.** Add `axe-core` to the Vitest suite — render each page and assert no violations (login, signup, dashboard in list + editor states). A11y is baked into feature specs (semantic HTML, labels, keyboard flow from the approved ui-layout prototype). Final Lighthouse manual pass pre-deploy as release gate. No separate e2e browser suite.
