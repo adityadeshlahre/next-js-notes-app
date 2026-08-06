@@ -1,6 +1,6 @@
 import { db } from "@next-js-notes-app/db";
-import { noteTags, notes } from "@next-js-notes-app/db/schema/index";
-import { desc, eq } from "drizzle-orm";
+import { notes, noteTags, tags } from "@next-js-notes-app/db/schema/index";
+import { and, asc, desc, eq, ilike, inArray, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 import {
@@ -11,17 +11,56 @@ import {
   parseJson,
 } from "@/lib/api-helpers";
 import { noteTagsByName, upsertTags } from "@/lib/tags";
-import { createNoteSchema } from "@/lib/validation";
+import { createNoteSchema, listNotesQuerySchema } from "@/lib/validation";
+
+function escapeLike(value: string): string {
+  return value.replace(/[\\%_]/g, (m) => `\\${m}`);
+}
 
 export async function GET(request: Request) {
   const auth = await requireUser(request.headers);
   if (isErrorResponse(auth)) return auth;
 
+  const parsed = listNotesQuerySchema.safeParse(
+    Object.fromEntries(new URL(request.url).searchParams),
+  );
+  if (!parsed.success) {
+    return jsonError(400, firstIssueMessage(parsed.error));
+  }
+
+  const { q, tags: tagsParam, dir } = parsed.data;
+
+  const conditions = [eq(notes.userId, auth.user.id)];
+  if (q) {
+    conditions.push(ilike(notes.title, `%${escapeLike(q)}%`));
+  }
+
+  const filterTags = tagsParam
+    ? [
+        ...new Set(
+          tagsParam
+            .split(",")
+            .map((t) => t.trim().toLowerCase())
+            .filter(Boolean),
+        ),
+      ]
+    : [];
+  if (filterTags.length > 0) {
+    const matching = db
+      .select({ noteId: noteTags.noteId })
+      .from(noteTags)
+      .innerJoin(tags, eq(noteTags.tagId, tags.id))
+      .where(and(eq(tags.userId, auth.user.id), inArray(tags.name, filterTags)))
+      .groupBy(noteTags.noteId)
+      .having(sql`count(${noteTags.tagId}) = ${filterTags.length}`);
+    conditions.push(inArray(notes.id, matching));
+  }
+
   const userNotes = await db
     .select()
     .from(notes)
-    .where(eq(notes.userId, auth.user.id))
-    .orderBy(desc(notes.createdAt));
+    .where(and(...conditions))
+    .orderBy(dir === "asc" ? asc(notes.createdAt) : desc(notes.createdAt));
 
   const tagsByNote = await noteTagsByName(userNotes.map((note) => note.id));
 

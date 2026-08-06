@@ -10,7 +10,8 @@ import {
 import { Button } from "@next-js-notes-app/ui/components/button";
 import { Input } from "@next-js-notes-app/ui/components/input";
 import { Textarea } from "@next-js-notes-app/ui/components/textarea";
-import { useCallback, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 type Note = {
@@ -41,6 +42,12 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 export default function NotesDashboard({ name }: { name: string }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const q = searchParams.get("q") ?? "";
+  const activeTags = searchParams.get("tags")?.split(",").filter(Boolean) ?? [];
+  const dir = searchParams.get("dir") ?? "desc";
+
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -51,20 +58,70 @@ export default function NotesDashboard({ name }: { name: string }) {
   const [allTags, setAllTags] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Note | null>(null);
+  const [qDraft, setQDraft] = useState(q);
+  const qDraftRef = useRef(qDraft);
+  qDraftRef.current = qDraft;
+
+  useEffect(() => {
+    setQDraft(q);
+  }, [q]);
+
+  const pushParams = useCallback(
+    (changes: Record<string, string | string[] | null>) => {
+      const params = new URLSearchParams(searchParams.toString());
+      for (const [key, value] of Object.entries(changes)) {
+        if (value === null || value === "" || (Array.isArray(value) && value.length === 0)) {
+          params.delete(key);
+        } else {
+          params.set(key, Array.isArray(value) ? value.join(",") : value);
+        }
+      }
+      const qs = params.toString();
+      router.replace(qs ? `/dashboard?${qs}` : "/dashboard", { scroll: false });
+    },
+    [router, searchParams],
+  );
+
+  const hasFilters = q !== "" || activeTags.length > 0 || dir !== "desc";
+
+  const listUrl = useCallback(() => {
+    const params = new URLSearchParams();
+    if (q) params.set("q", q);
+    if (activeTags.length > 0) params.set("tags", activeTags.join(","));
+    if (dir !== "desc") params.set("dir", dir);
+    const qs = params.toString();
+    return qs ? `/api/notes?${qs}` : "/api/notes";
+  }, [q, activeTags, dir]);
 
   const load = useCallback(async () => {
     const [list, tagList] = await Promise.all([
-      api<Note[]>("/api/notes"),
+      api<Note[]>(listUrl()),
       api<{ name: string }[]>("/api/tags"),
     ]);
     setNotes(list);
     setAllTags(tagList.map((t) => t.name));
     setLoading(false);
-  }, []);
+  }, [listUrl]);
 
   useEffect(() => {
     load().catch((e: Error) => toast.error(e.message));
   }, [load]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (qDraftRef.current !== q) pushParams({ q: qDraftRef.current || null });
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [qDraft, q, pushParams]);
+
+  const toggleTag = (tag: string) => {
+    const next = activeTags.includes(tag)
+      ? activeTags.filter((t) => t !== tag)
+      : [...activeTags, tag];
+    pushParams({ tags: next });
+  };
+
+  const clearFilters = () => pushParams({ q: null, tags: null, dir: null });
 
   const select = (note: Note) => {
     setSelectedId(note.id);
@@ -147,23 +204,95 @@ export default function NotesDashboard({ name }: { name: string }) {
   };
 
   return (
-    <div className="grid h-full grid-cols-1 md:grid-cols-[280px_1fr]">
-      <aside aria-label="Notes list" className="border-border overflow-y-auto border-r p-3">
+    <div className="grid h-full grid-cols-1 md:grid-cols-[220px_280px_1fr]">
+      <nav
+        aria-label="Filters"
+        className="border-border overflow-y-auto border-b p-3 md:border-b-0 md:border-r"
+      >
         <p className="mb-2 truncate px-1 text-xs text-muted-foreground">{name}</p>
-        <Button className="w-full" onClick={() => select(emptyNote)}>
+        <div className="space-y-4">
+          <div className="space-y-1">
+            <label htmlFor="search-notes" className="text-xs font-medium text-muted-foreground">
+              Search
+            </label>
+            <Input
+              id="search-notes"
+              placeholder="Search by title…"
+              value={qDraft}
+              onChange={(e) => setQDraft(e.target.value)}
+              className="text-sm"
+            />
+          </div>
+          <div className="space-y-1">
+            <label htmlFor="sort-notes" className="text-xs font-medium text-muted-foreground">
+              Sort
+            </label>
+            <select
+              id="sort-notes"
+              value={dir}
+              onChange={(e) => pushParams({ dir: e.target.value })}
+              className="border-input bg-background h-9 w-full border px-2 text-sm"
+            >
+              <option value="desc">Newest first</option>
+              <option value="asc">Oldest first</option>
+            </select>
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-muted-foreground">Tags</p>
+            {allTags.length === 0 ? (
+              <p className="text-xs text-muted-foreground">No tags yet.</p>
+            ) : (
+              <ul className="space-y-1">
+                {allTags.map((tag) => (
+                  <li key={tag}>
+                    <button
+                      type="button"
+                      aria-pressed={activeTags.includes(tag)}
+                      onClick={() => toggleTag(tag)}
+                      className="border-border w-full border px-2 py-1 text-left text-sm hover:bg-muted"
+                    >
+                      {tag}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {hasFilters && (
+              <Button variant="outline" size="sm" className="w-full" onClick={clearFilters}>
+                Clear filters
+              </Button>
+            )}
+          </div>
+        </div>
+      </nav>
+
+      <section
+        aria-label="Notes"
+        className="border-border flex h-full flex-col overflow-y-auto border-r p-3"
+      >
+        <Button className="mb-2 w-full" onClick={() => select(emptyNote)}>
           + New note
         </Button>
         {loading ? (
           <p className="mt-4 text-sm text-muted-foreground">Loading…</p>
         ) : notes.length === 0 ? (
-          <div className="mt-4 space-y-2">
-            <p className="text-sm text-muted-foreground">No notes yet.</p>
-            <Button className="w-full" variant="outline" onClick={() => select(emptyNote)}>
-              Create your first note
-            </Button>
-          </div>
+          hasFilters ? (
+            <div className="mt-4 space-y-2">
+              <p className="text-sm text-muted-foreground">No notes match your filters.</p>
+              <Button variant="outline" className="w-full" onClick={clearFilters}>
+                Clear filters
+              </Button>
+            </div>
+          ) : (
+            <div className="mt-4 space-y-2">
+              <p className="text-sm text-muted-foreground">No notes yet.</p>
+              <Button variant="outline" className="w-full" onClick={() => select(emptyNote)}>
+                Create your first note
+              </Button>
+            </div>
+          )
         ) : (
-          <ul className="mt-2 space-y-1">
+          <ul className="space-y-1">
             {notes.map((note) => (
               <li key={note.id}>
                 <button
@@ -197,9 +326,9 @@ export default function NotesDashboard({ name }: { name: string }) {
             ))}
           </ul>
         )}
-      </aside>
+      </section>
 
-      <main aria-label="Note editor" className="flex h-full flex-col p-4">
+      <section aria-label="Note editor" className="flex h-full flex-col p-4">
         <Input
           aria-label="Note title"
           placeholder="Note title"
@@ -277,7 +406,7 @@ export default function NotesDashboard({ name }: { name: string }) {
             </Button>
           </div>
         </div>
-      </main>
+      </section>
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogPopup>

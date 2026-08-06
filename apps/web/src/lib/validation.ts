@@ -23,3 +23,10 @@ export const updateNoteSchema = z.object({
 export const noteIdSchema = z.object({
   id: z.uuid("Invalid note id"),
 });
+
+export const listNotesQuerySchema = z.object({
+  q: z.string().max(200, "Search is too long").optional(),
+  tags: z.string().max(500).optional(),
+  sort: z.literal("createdAt").default("createdAt"),
+  dir: z.enum(["asc", "desc"]).default("desc"),
+});

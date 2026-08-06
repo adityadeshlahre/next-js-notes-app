@@ -1,6 +1,7 @@
 import { auth } from "@next-js-notes-app/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 
 import NotesDashboard from "./dashboard";
 
@@ -13,5 +14,9 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
-  return <NotesDashboard name={session.user.name} />;
+  return (
+    <Suspense fallback={<p className="p-4 text-sm text-muted-foreground">Loading…</p>}>
+      <NotesDashboard name={session.user.name} />
+    </Suspense>
+  );
 }

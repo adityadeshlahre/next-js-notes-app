@@ -223,3 +223,122 @@ describe("notes CRUD", { sequential: true }, () => {
     expect(invalid.status).toBe(400);
   });
 });
+
+describe("notes filters", { sequential: true }, () => {
+  async function seedNotes(
+    token: string,
+    notesIn: { title: string; body?: string; tags?: string[] }[],
+  ) {
+    const created = [];
+    for (const n of notesIn) {
+      const res = await createNote(
+        new Request(`${BASE}/api/notes`, {
+          method: "POST",
+          headers: jsonHeaders(token),
+          body: JSON.stringify(n),
+        }),
+      );
+      expect(res.status).toBe(201);
+      created.push((await res.json()) as { id: string; title: string });
+    }
+    return created;
+  }
+
+  it("searches by title case-insensitively, not the body", async () => {
+    const token = await signUpCookie("fanny@example.com");
+    await seedNotes(token, [
+      { title: "Shopping list", body: "milk" },
+      { title: "Groceries", body: "needle in haystack" },
+    ]);
+
+    const res = await listNotes(
+      new Request(`${BASE}/api/notes?q=shopping`, { headers: headers(token) }),
+    );
+    expect(res.status).toBe(200);
+    const list = (await res.json()) as { title: string }[];
+    expect(list.map((n) => n.title)).toEqual(["Shopping list"]);
+
+    const resBody = await listNotes(
+      new Request(`${BASE}/api/notes?q=needle`, { headers: headers(token) }),
+    );
+    const listBody = (await resBody.json()) as { title: string }[];
+    expect(listBody).toEqual([]);
+  });
+
+  it("filters by multiple tags with AND semantics", async () => {
+    const token = await signUpCookie("gina@example.com");
+    await seedNotes(token, [
+      { title: "note-a", tags: ["work", "important"] },
+      { title: "note-b", tags: ["work"] },
+      { title: "note-c", tags: ["important"] },
+      { title: "note-d" },
+    ]);
+
+    const res = await listNotes(
+      new Request(`${BASE}/api/notes?tags=work,important`, { headers: headers(token) }),
+    );
+    expect(res.status).toBe(200);
+    const list = (await res.json()) as { title: string }[];
+    expect(list.map((n) => n.title)).toEqual(["note-a"]);
+  });
+
+  it("sorts by createdAt asc and desc", async () => {
+    const token = await signUpCookie("hank@example.com");
+    const created = await seedNotes(token, [{ title: "older" }, { title: "newer" }]);
+    const [older, newer] = created;
+    await db
+      .update(notes)
+      .set({ createdAt: new Date("2026-01-01T00:00:00Z") })
+      .where(eq(notes.id, older.id));
+    await db
+      .update(notes)
+      .set({ createdAt: new Date("2026-06-01T00:00:00Z") })
+      .where(eq(notes.id, newer.id));
+
+    const ascRes = await listNotes(
+      new Request(`${BASE}/api/notes?sort=createdAt&dir=asc`, { headers: headers(token) }),
+    );
+    const ascList = (await ascRes.json()) as { title: string }[];
+    expect(ascList.map((n) => n.title)).toEqual(["older", "newer"]);
+
+    const descRes = await listNotes(
+      new Request(`${BASE}/api/notes?sort=createdAt&dir=desc`, { headers: headers(token) }),
+    );
+    const descList = (await descRes.json()) as { title: string }[];
+    expect(descList.map((n) => n.title)).toEqual(["newer", "older"]);
+  });
+
+  it("combines q, tags, and dir in one query", async () => {
+    const token = await signUpCookie("ines@example.com");
+    const seeded = await seedNotes(token, [
+      { title: "Meeting notes", tags: ["work", "red"] },
+      { title: "Meeting ideas", tags: ["work"] },
+      { title: "Personal diary", tags: ["red"] },
+    ]);
+    await db
+      .update(notes)
+      .set({ createdAt: new Date("2026-02-01T00:00:00Z") })
+      .where(eq(notes.id, seeded[1].id));
+    await db
+      .update(notes)
+      .set({ createdAt: new Date("2026-03-01T00:00:00Z") })
+      .where(eq(notes.id, seeded[0].id));
+
+    const res = await listNotes(
+      new Request(`${BASE}/api/notes?q=meeting&tags=work&dir=asc`, { headers: headers(token) }),
+    );
+    expect(res.status).toBe(200);
+    const list = (await res.json()) as { title: string }[];
+    expect(list.map((n) => n.title)).toEqual(["Meeting ideas", "Meeting notes"]);
+  });
+
+  it("returns 400 for an invalid sort direction", async () => {
+    const token = await signUpCookie("jack@example.com");
+
+    const res = await listNotes(
+      new Request(`${BASE}/api/notes?dir=sideways`, { headers: headers(token) }),
+    );
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { message: string }).message).toBeTruthy();
+  });
+});
