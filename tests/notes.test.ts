@@ -148,6 +148,21 @@ describe("notes CRUD", { sequential: true }, () => {
     expect(body.message).toBeTruthy();
   });
 
+  it("returns 400 for malformed JSON instead of a 500", async () => {
+    const token = await signUpCookie("eve@example.com");
+
+    const res = await createNote(
+      new Request(`${BASE}/api/notes`, {
+        method: "POST",
+        headers: jsonHeaders(token),
+        body: "{not valid json",
+      }),
+    );
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { message: string };
+    expect(body.message).toBeTruthy();
+  });
+
   it("returns 404 when a user touches another user's note (no existence leak)", async () => {
     const tokenA = await signUpCookie("owner@example.com");
     const tokenB = await signUpCookie("intruder@example.com");
@@ -184,7 +199,7 @@ describe("notes CRUD", { sequential: true }, () => {
     expect(stillThere.title).toBe("Private");
   });
 
-  it("returns 404 for a missing or invalid note id", async () => {
+  it("returns 404 for a missing note id and 400 for an invalid one", async () => {
     const token = await signUpCookie("erin@example.com");
 
     const missing = await getNote(

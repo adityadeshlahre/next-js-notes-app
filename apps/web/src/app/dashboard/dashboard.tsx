@@ -52,7 +52,11 @@ export default function NotesDashboard({ name }: { name: string }) {
   };
 
   const save = useCallback(async () => {
-    if (saving || (!title.trim() && !body.trim())) return;
+    if (saving) return;
+    if (!title.trim() && !body.trim()) {
+      toast.error("Nothing to save — add a title or some text");
+      return;
+    }
     setSaving(true);
     try {
       if (selectedId) {
@@ -118,7 +122,12 @@ export default function NotesDashboard({ name }: { name: string }) {
         {loading ? (
           <p className="mt-4 text-sm text-muted-foreground">Loading…</p>
         ) : notes.length === 0 ? (
-          <p className="mt-4 text-sm text-muted-foreground">No notes yet.</p>
+          <div className="mt-4 space-y-2">
+            <p className="text-sm text-muted-foreground">No notes yet.</p>
+            <Button className="w-full" variant="outline" onClick={() => select(emptyNote)}>
+              Create your first note
+            </Button>
+          </div>
         ) : (
           <ul className="mt-2 space-y-1">
             {notes.map((note) => (

@@ -3,7 +3,13 @@ import { notes } from "@next-js-notes-app/db/schema/index";
 import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
-import { requireUser, isErrorResponse, jsonError } from "@/lib/api-helpers";
+import {
+  requireUser,
+  isErrorResponse,
+  jsonError,
+  firstIssueMessage,
+  parseJson,
+} from "@/lib/api-helpers";
 import { noteIdSchema, updateNoteSchema } from "@/lib/validation";
 
 type Params = { params: Promise<{ id: string }> };
@@ -37,9 +43,9 @@ export async function PATCH(request: Request, { params }: Params) {
   const id = parseNoteId((await params).id);
   if (id instanceof NextResponse) return id;
 
-  const parsed = updateNoteSchema.safeParse(await request.json());
+  const parsed = updateNoteSchema.safeParse(await parseJson(request));
   if (!parsed.success) {
-    return jsonError(400, parsed.error.issues[0]?.message ?? "Invalid input");
+    return jsonError(400, firstIssueMessage(parsed.error));
   }
   if (Object.keys(parsed.data).length === 0) {
     return jsonError(400, "Nothing to update");

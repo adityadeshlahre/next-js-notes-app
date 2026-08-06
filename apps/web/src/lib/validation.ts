@@ -13,6 +13,3 @@ export const updateNoteSchema = z.object({
 export const noteIdSchema = z.object({
   id: z.uuid("Invalid note id"),
 });
-
-export type CreateNoteInput = z.infer<typeof createNoteSchema>;
-export type UpdateNoteInput = z.infer<typeof updateNoteSchema>;

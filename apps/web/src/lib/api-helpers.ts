@@ -1,5 +1,6 @@
 import { auth } from "@next-js-notes-app/auth";
 import { NextResponse } from "next/server";
+import type { ZodError } from "zod";
 
 export type SessionUser = { id: string; email: string; name: string };
 export type ErrorResponse = NextResponse<{ message: string }>;
@@ -24,6 +25,14 @@ export function isErrorResponse(
   return result instanceof NextResponse;
 }
 
-export function requestHeaders(request: Request): Headers {
-  return request.headers;
+export function firstIssueMessage(error: ZodError): string {
+  return error.issues[0]?.message ?? "Invalid input";
+}
+
+export async function parseJson(request: Request): Promise<unknown> {
+  try {
+    return await request.json();
+  } catch {
+    return null;
+  }
 }
