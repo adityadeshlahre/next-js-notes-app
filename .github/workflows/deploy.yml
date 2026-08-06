@@ -27,6 +27,7 @@ jobs:
           context: .
           file: apps/web/Dockerfile
           platforms: linux/amd64
+          no-cache: true
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/next-js-notes-app:latest
 
