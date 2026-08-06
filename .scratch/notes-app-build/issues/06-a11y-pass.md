@@ -4,7 +4,11 @@
 
 **Blocked by:** #05 (filter/sort/search — all pages built)
 
-**Status:** ready-for-agent
+**Status:** deferred — skipped for now, revisit post-launch
+
+## Comments
+
+- Deferred 2026-08-06 by request (user: "we can discard a11y support for now, do it later"). No code written for this ticket. Item checklist below retained for the future pass.
 
 - [ ] axe-core assertions in Vitest for: `/login`, `/signup`, `/dashboard` (list + editor states) — zero violations
 - [ ] Semantic HTML landmarks: `<header>`, `<main>`, `<nav aria-label=...>`, `<section aria-label=...>`
