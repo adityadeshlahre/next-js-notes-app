@@ -82,7 +82,7 @@ Covered suites (spec §6): auth flows (signup/signin/signout, bcrypt prefix visi
 - **404 hides existence.** Cross-user access returns 404 (not 403) so an attacker can't probe which note ids exist.
 - **Multi-tag filter is AND-only.** Matches the spec; OR-matching would be a trivial query tweak but wasn't asked for.
 - **Autocomplete uses a native `<datalist>`.** Functionally correct and dependency-free; a styled/fully keyboard-operable combobox is a future improvement.
-- **Search debounces (300ms) client-side**, then round-trips through the URL; server does the authoritative filtering.
+- **Search debounces (300ms) client-side into local state**; server does the authoritative filtering. Filter state lives in React local state (fetched via TanStack Query) — no URL round-trip, no shareable/back-button URL state.
 
 ## Future improvements
 
