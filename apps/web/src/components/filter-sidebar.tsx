@@ -77,9 +77,14 @@ function FilterSidebar({
                     type="button"
                     aria-pressed={activeTags.includes(tag)}
                     onClick={() => onToggleTag(tag)}
-                    className="border-border w-full border px-2 py-1 text-left text-sm hover:bg-muted"
+                    className={`flex w-full items-center justify-between gap-2 border px-2 py-1 text-left text-sm hover:bg-muted ${
+                      activeTags.includes(tag)
+                        ? "border-ring bg-accent text-accent-foreground"
+                        : "border-border"
+                    }`}
                   >
-                    {tag}
+                    <span className="truncate">{tag}</span>
+                    {activeTags.includes(tag) && <span aria-hidden="true">✓</span>}
                   </button>
                 </li>
               ))}
