@@ -11,6 +11,7 @@ import { Button } from "@next-js-notes-app/ui/components/button";
 import { Input } from "@next-js-notes-app/ui/components/input";
 import { Textarea } from "@next-js-notes-app/ui/components/textarea";
 import { useRouter, useSearchParams } from "next/navigation";
+import type { Route } from "next";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -79,7 +80,7 @@ export default function NotesDashboard({ name }: { name: string }) {
         }
       }
       const qs = params.toString();
-      const href = qs ? `/dashboard?${qs}` : "/dashboard";
+      const href = (qs ? `/dashboard?${qs}` : "/dashboard") as Route;
       if (behavior === "push") router.push(href, { scroll: false });
       else router.replace(href, { scroll: false });
     },
