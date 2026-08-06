@@ -4,6 +4,9 @@ WORKDIR /app
 ENV SKIP_ENV_VALIDATION=1
 # the build evaluates the auth config; the real secret comes from compose at runtime
 ENV BETTER_AUTH_SECRET=build-time-placeholder-secret-not-used-at-runtime
+# the below line fixse the worn
+# ARG BETTER_AUTH_SECRET
+# ENV BETTER_AUTH_SECRET=$BETTER_AUTH_SECRET
 
 COPY . .
 RUN --mount=type=cache,target=/root/.bun/install/cache bun install
