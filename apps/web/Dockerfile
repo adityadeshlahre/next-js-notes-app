@@ -12,6 +12,9 @@ ENV NODE_ENV=production
 RUN cd apps/web && bun run build
 # standalone output excludes public/; ensure it exists so the runner copy never fails
 RUN mkdir -p apps/web/public
+# bundle the migration runner (drizzle + pg) for the deploy preDeployCommand
+RUN bun build scripts/db-migrate.ts --target=node --format=esm --outfile=/app/db-migrate.mjs
+RUN mkdir -p /app/migrations && cp -r packages/db/src/migrations/. /app/migrations/
 
 FROM node:24-slim AS runner
 WORKDIR /app
@@ -20,6 +23,8 @@ ENV NODE_ENV=production
 COPY --from=builder /app/apps/web/.next/standalone ./
 COPY --from=builder /app/apps/web/.next/static ./apps/web/.next/static
 COPY --from=builder /app/apps/web/public ./apps/web/public
+COPY --from=builder /app/db-migrate.mjs ./db-migrate.mjs
+COPY --from=builder /app/migrations ./migrations
 
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3001

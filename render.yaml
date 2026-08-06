@@ -1,0 +1,31 @@
+# Render Blueprint — see README "Deployment" for setup steps.
+services:
+  - type: web
+    name: next-js-notes-app
+    runtime: docker
+    repo: https://github.com/adityadeshlahre/next-js-notes-app
+    plan: free
+    dockerContext: .
+    dockerfilePath: apps/web/Dockerfile
+    healthCheckPath: /
+    # Runs inside the built image (workdir /app) against the managed DB
+    preDeployCommand: node db-migrate.mjs
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: next-js-notes-app-db
+          property: connectionString
+      # Set in the Render dashboard: BETTER_AUTH_URL=https://<service>.onrender.com
+      - key: BETTER_AUTH_URL
+        sync: false
+      # Set in the Render dashboard (min 32 chars, any random string)
+      - key: BETTER_AUTH_SECRET
+        sync: false
+      # Set in the Render dashboard: CORS_ORIGIN=https://<service>.onrender.com
+      - key: CORS_ORIGIN
+        sync: false
+
+databases:
+  - name: next-js-notes-app-db
+    # free tier — expires after 30 days, then the DB (and app) stop
+    plan: basic-256mb

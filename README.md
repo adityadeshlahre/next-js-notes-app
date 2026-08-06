@@ -1,133 +1,139 @@
 # next-js-notes-app
 
-This project was created with [Better-T-Stack](https://github.com/AmanVarshney01/create-better-t-stack), a modern TypeScript stack that combines Next.js, Self, and more.
+A full-stack notes app built for a software-engineering assignment: a signed-in user creates, edits, tags, searches, filters, and deletes their own notes.
+
+**Stack:** Next.js 16 (App Router) · TypeScript · better-auth · Drizzle ORM · PostgreSQL 18 · Tailwind CSS v4 · shadcn/ui · Bun · Turborepo · Vitest
+
+**Live URL:** (deployed on Render — see [Deployment](#deployment))
+
+---
+
+## Test account (for the evaluator)
+
+|          |                     |
+| -------- | ------------------- |
+| Email    | `demo@notesapp.dev` |
+| Password | `DemoPass123!`      |
+
+Seed it after deploy (see [Deployment](#deployment)) or locally with `bun run seed`.
+
+---
 
 ## Features
 
-- **TypeScript** - For type safety and improved developer experience
-- **Next.js** - Full-stack React framework
-- **TailwindCSS** - Utility-first CSS for rapid UI development
-- **Shared UI package** - shadcn/ui primitives live in `packages/ui`
-- **Drizzle** - TypeScript-first ORM
-- **PostgreSQL** - Database engine
-- **Authentication** - Better-Auth
-- **Husky** - Git hooks for code quality
-- **Oxlint** - Oxlint + Oxfmt (linting & formatting)
-- **Turborepo** - Optimized monorepo build system
+- **Auth** — signup/signin/signout with email+password; passwords hashed with bcryptjs (2a rounds); session cookie httpOnly; route-guard middleware + per-page re-validation.
+- **Notes CRUD** — create, edit, delete; ownership enforced server-side (cross-user access returns 404, no existence leak).
+- **Tags** — assign multiple tags per note; typing a tag name implicitly creates it (trimmed + lowercased, unique per user); autocomplete from your existing tags.
+- **Filter / sort / search** — multi-tag AND filter, case-insensitive title search (ILIKE, wildcards escaped), newest/oldest sort; all combined in one server query; state round-trips through URL params (`?tags=a,b&q=…&dir=asc`) so it's shareable and the back button works.
 
-## Getting Started
+## Run locally
 
-First, install the dependencies:
+Prerequisites: [Bun](https://bun.sh), [Docker](https://www.docker.com/).
 
 ```bash
-bun install
+bun install          # install dependencies
+bun run db:start     # start the local Postgres (docker compose)
+cp apps/web/.env.example apps/web/.env   # if not already present; adjust as needed
+bun run db:migrate   # apply schema migrations to the dev DB
+bun run dev:web      # start the app at http://localhost:3001
 ```
 
-## Database Setup
+Useful scripts: `npm run test` (test suite — requires the Postgres container running), `bun run check-types`, `npm run lint`, `bun run db:generate`, `bun run db:studio`.
 
-This project uses PostgreSQL with Drizzle ORM.
+## Database schema & why
 
-1. Make sure you have a PostgreSQL database set up.
-2. Update your `apps/web/.env` file with your PostgreSQL connection details.
+Migrated with Drizzle (`packages/db/src/migrations/`), applied at deploy via a bundled runner (`scripts/db-migrate.ts`).
 
-3. Apply the schema to your database:
+| Table                                        | Purpose                         | Why it looks like this                                                                                                                                               |
+| -------------------------------------------- | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `user`, `session`, `account`, `verification` | better-auth session/auth tables | standard better-auth PostgreSQL schema                                                                                                                               |
+| `notes`                                      | a user's note (title + body)    | `userId` FK with `ON DELETE CASCADE` + index; ownership scoping lives on every query, so a note id never reveals whether another user's note exists (404 either way) |
+| `tags`                                       | a user's tag vocabulary         | `UNIQUE (userId, name)` — one tag row per user per name, so implicit creation is race-safe (`ON CONFLICT DO NOTHING` + re-select)                                    |
+| `note_tags`                                  | note ↔ tag many-to-many join    | `UNIQUE (noteId, tagId)`; assignment is wholesale-replaced (delete + insert) inside a transaction                                                                    |
 
-```bash
-bun run db:push
-```
+Timestamps are `timestamptz` with DB-side defaults. Migrations are sequential SQL files + a `meta/` journal read by the migrator.
 
-Then, run the development server:
+## API
 
-```bash
-bun run dev
-```
+All routes require a session cookie; errors are structured `{ "message": "..." }` with proper status codes (401/400/404).
 
-Open [http://localhost:3001](http://localhost:3001) in your browser to see the fullstack application.
-
-## UI Customization
-
-React web apps in this stack share shadcn/ui primitives through `packages/ui`.
-
-- Change design tokens and global styles in `packages/ui/src/styles/globals.css`
-- Update shared primitives in `packages/ui/src/components/*`
-- Adjust shadcn aliases or style config in `packages/ui/components.json` and `apps/web/components.json`
-
-### Add more shared components
-
-Run this from the project root to add more primitives to the shared UI package:
-
-```bash
-npx shadcn@latest add accordion dialog popover sheet table -c packages/ui
-```
-
-Import shared components like this:
-
-```tsx
-import { Button } from "@next-js-notes-app/ui/components/button";
-```
-
-### Add app-specific blocks
-
-If you want to add app-specific blocks instead of shared primitives, run the shadcn CLI from `apps/web`.
-
-## Deployment
-
-### Docker Compose
-
-- Target: web + server
-- Config: `docker-compose.yml` (app Dockerfiles live in `apps/*/Dockerfile`)
-- Build images: bun run docker:build
-- Start: bun run docker:up
-- Logs: bun run docker:logs
-- Stop: bun run docker:down
-
-Environment variables are read from each app's `.env` file (baked into web builds for public variables) and overridden in `docker-compose.yml` for container networking.
-
-For more details, see the guide on [Deploying with Docker Compose](https://www.better-t-stack.dev/docs/guides/docker).
-
-## Git Hooks and Formatting
-
-- Initialize hooks: `bun run prepare`
-- Run checks: `bun run check`
+| Method           | Path             | Behavior                                          |
+| ---------------- | ---------------- | ------------------------------------------------- |
+| GET/POST         | `/api/notes`     | List (filters: `q`, `tags` AND, `dir`) / create   |
+| GET/PATCH/DELETE | `/api/notes/:id` | Read / partial update / delete — 404 if not owned |
+| GET              | `/api/tags`      | Current user's tags (filter UI + autocomplete)    |
+| POST             | `/api/auth/*`    | better-auth signup/signin/signout/session         |
 
 ## Testing
 
+Vitest integration tests run **in-process against real Postgres** (a separate `notes_app_test` database, migrations applied by global setup, tables truncated between suites). Tests were written **before** the implementation for each feature (TDD):
+
 ```bash
-npm run test
+npm run test   # 33 tests — auth, ownership 404s, notes CRUD, tags, filters
 ```
 
-Runs the Vitest suite against a `notes_app_test` Postgres database (created automatically by the global setup; requires the docker-compose Postgres to be running).
+Covered suites (spec §6): auth flows (signup/signin/signout, bcrypt prefix visible, duplicate email), ownership enforcement (cross-user GET/PATCH/DELETE → 404, data intact), filter/sort/search (multi-tag AND, ILIKE title-only, asc/desc, combined query), malformed JSON → 400, LIKE-wildcard literal matching.
 
-## Lint
+## Tradeoffs & shortcuts (honest account)
 
-`npm run lint` runs **oxlint** (not ESLint + Prettier). The scaffold ships oxlint/oxfmt as the lint & format tooling; the alias keeps the assignment's `npm run lint` invocation working. This substitution is a deliberate tradeoff.
+- **oxlint instead of ESLint + Prettier.** The assignment asks for ESLint+Prettier; the scaffold ships oxlint/oxfmt as the lint & format tooling. `npm run lint` passes via the oxlint alias. Documented rather than silently substituted.
+- **Note body is plain text.** Stored and rendered as-is (no markdown rendering, no rich text). Matches the spec's plain-textarea requirement; a read-only view using `whitespace-pre-wrap` is a listed future improvement.
+- **Tags created implicitly on assignment.** Typing a new tag name in the editor creates it for the user (per spec). Tags are never shared across users.
+- **404 hides existence.** Cross-user access returns 404 (not 403) so an attacker can't probe which note ids exist.
+- **Multi-tag filter is AND-only.** Matches the spec; OR-matching would be a trivial query tweak but wasn't asked for.
+- **Autocomplete uses a native `<datalist>`.** Functionally correct and dependency-free; a styled/fully keyboard-operable combobox is a future improvement.
+- **Search debounces (300ms) client-side**, then round-trips through the URL; server does the authoritative filtering.
 
-## Project Structure
+## Future improvements
 
-```
-next-js-notes-app/
-├── apps/
-│   └── web/         # Fullstack application (Next.js)
-├── packages/
-│   ├── ui/          # Shared shadcn/ui components and styles
-│   ├── auth/        # Authentication configuration & logic
-│   └── db/          # Database schema & queries
-```
+- Accessibility pass (axe + keyboard walkthrough + Lighthouse) — deferred by design decision, tracked in `.scratch/notes-app-build/issues/06-a11y-pass.md`.
+- Relative timestamps ("2m ago") in the note list; mobile editor back-link navigation.
+- Zod schema unit tests (currently covered indirectly by integration tests).
+- Pagination for large note counts; tag rename/merge; note body preview (markdown).
 
-## Available Scripts
+## How AI tools were used
 
-- `bun run dev`: Start all applications in development mode
-- `bun run build`: Build all applications
-- `bun run dev:web`: Start only the web application
-- `bun run check-types`: Check TypeScript types across all apps
-- `bun run db:push`: Push schema changes to database
-- `bun run db:generate`: Generate database client/types
-- `bun run db:migrate`: Run database migrations
-- `bun run db:studio`: Open database studio UI
-- `bun run check`: Run Oxlint and Oxfmt
-- `npm run lint`: Run Oxlint (assignment-compatible alias)
-- `npm run test`: Run the Vitest suite (requires Postgres running)
-- `bun run docker:build`: Build the Docker Compose images
-- `bun run docker:up`: Build and start the Docker Compose stack
-- `bun run docker:logs`: Tail logs from the Docker Compose stack
-- `bun run docker:down`: Stop the Docker Compose stack
+This project was built in an agentic coding loop (OpenAI Codex / opencode CLI):
+
+- **Spec → tickets:** the assignment spec was decomposed into a build queue of 7 tickets (`.scratch/notes-app-build/issues/`), each with acceptance criteria.
+- **TDD per ticket:** tests were written first (against real Postgres via Vitest), then implementation, then the suite kept green (33 tests).
+- **Two-axis code review:** after each ticket, two review passes ran — one checking the code against the spec, one against repo standards — and findings were fixed in follow-up commits.
+- **Human decisions at each gate:** ticket scope, schema shape, deferring the a11y ticket, GitHub account, and the deploy approach (Docker Hub → Render web service) were decided by the author, not the AI.
+- Full conversation records live in the Codex/opencode session logs; the repo history shows the incremental commit trail (feature commits + review-fix commits per ticket).
+
+## Deployment
+
+Two working paths; **the one used for this deployment is the Docker Hub image** (option B).
+
+### A. Render Blueprint (one-click, `render.yaml` at repo root)
+
+1. Push this repo to GitHub (public).
+2. Render dashboard → **New → Blueprint** → pick the repo. Render reads `render.yaml`: managed Postgres (`basic-256mb`, free tier — **expires after 30 days**) + Docker web service.
+3. Set the three `sync: false` env vars in the service: `BETTER_AUTH_URL` and `CORS_ORIGIN` = `https://<your-service>.onrender.com`, and a `BETTER_AUTH_SECRET` (any random string ≥ 32 chars).
+4. Migrations run automatically via `preDeployCommand` (`node db-migrate.mjs` — bundled drizzle + pg, migrations copied into the image).
+
+### B. Docker Hub image → Render web service (used here)
+
+1. Build & publish the image:
+
+   ```bash
+   docker login                # your Docker Hub account
+   docker build -t <dockerhub-user>/next-js-notes-app:latest .
+   docker push <dockerhub-user>/next-js-notes-app:latest
+   ```
+
+2. Render dashboard → **New → Web Service** → pick the image from **Docker Hub**.
+3. **Create a Postgres instance** (Render → New → Postgres, free tier) and copy its **Internal connection string**.
+4. In the web service, set env vars:
+   - `DATABASE_URL` = the Postgres internal connection string
+   - `BETTER_AUTH_URL` = `https://<your-service>.onrender.com`
+   - `CORS_ORIGIN` = `https://<your-service>.onrender.com`
+   - `BETTER_AUTH_SECRET` = any random string ≥ 32 chars
+5. **Advanced → Pre-deploy command:** `node db-migrate.mjs` (the image contains the bundled migrator + migration files).
+6. Deploy, then seed the test account once the site is live:
+
+   ```bash
+   BETTER_AUTH_URL=https://<your-service>.onrender.com bun run seed
+   ```
+
+7. Verify: sign in with the test account above; create/edit/delete a note; add/remove tags; search, filter, and sort.
