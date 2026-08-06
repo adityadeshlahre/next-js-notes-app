@@ -24,7 +24,7 @@ Seed it after deploy (see [Deployment](#deployment)) or locally with `bun run se
 - **Auth** — signup/signin/signout with email+password; passwords hashed with bcryptjs (2a rounds); session cookie httpOnly; route-guard middleware + per-page re-validation.
 - **Notes CRUD** — create, edit, delete; ownership enforced server-side (cross-user access returns 404, no existence leak).
 - **Tags** — assign multiple tags per note; typing a tag name implicitly creates it (trimmed + lowercased, unique per user); autocomplete from your existing tags.
-- **Filter / sort / search** — multi-tag AND filter, case-insensitive title search (ILIKE, wildcards escaped), newest/oldest sort; all combined in one server query; state round-trips through URL params (`?tags=a,b&q=…&dir=asc`) so it's shareable and the back button works.
+- **Filter / sort / search** — multi-tag AND filter, case-insensitive title search (ILIKE, wildcards escaped), newest/oldest sort; all combined in one server query. Filters live in client state (search debounced 300ms) so nothing round-trips through the URL — kept deliberately simple, no shareable/back-button URL state (a known tradeoff).
 
 ## Run locally
 
